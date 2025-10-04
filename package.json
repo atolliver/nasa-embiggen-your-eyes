@@ -11,6 +11,7 @@
   "dependencies": {
     "@azure/storage-blob": "^12.28.0",
     "next": "15.5.4",
+    "openseadragon": "^5.0.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-router-dom": "^7.9.3"
@@ -19,6 +20,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/openseadragon": "^4.1.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-router-dom": "^5.3.3",
