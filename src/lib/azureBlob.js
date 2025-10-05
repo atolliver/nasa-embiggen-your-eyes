@@ -5,7 +5,8 @@ if (!connectionString) {
   throw new Error("Missing AZURE_STORAGE_CONNECTION_STRING in environment");
 }
 
-export const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+export const blobServiceClient =
+  BlobServiceClient.fromConnectionString(connectionString);
 export const containerName = process.env.AZURE_STORAGE_CONTAINER || "tiles";
 
 export async function listBlobs() {
