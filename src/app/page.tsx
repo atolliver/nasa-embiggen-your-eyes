@@ -1,7 +1,6 @@
 import Image from "next/image";
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import Link from "next/link";
+import ExploreClient from "./components/ExploreClient"
 
 export default function Home() {
   return (
