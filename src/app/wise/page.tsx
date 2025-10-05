@@ -119,7 +119,7 @@ export default function WisePage() {
       if (osdRef.current) {
         osdRef.current.destroy();
         osdRef.current = null;
-      }
+      } 
     };
   }, [imgUrl]);
 

@@ -8,6 +8,8 @@ export default function Home() {
   <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
     <div className="absolute flex items-center space-x-3 top-4 right-4">
         <h1 className="text-m font-bold mb-4 mt-4">B[U]ILT & Boujee </h1>
+        <Link
+        href = "https://built-illinois.org/#/Home">
         <Image
           src="/assets/built-logo.png"
           alt="B[U]ILT Logo"
@@ -15,6 +17,7 @@ export default function Home() {
           height={50}
           // className="rounded-2xl shadow-2xl"
         />
+        </Link>
     </div>
     <div className="text-center px-6">
       <h1 className="text-5xl font-bold mb-4">Welcome to B[U]ILT's Embiggen Your Eyes </h1>
