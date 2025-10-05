@@ -1,203 +1,129 @@
 'use client';
-import React from 'react'
-import { useState, useMemo } from 'react';
-import Image from 'next/image';
+import React, { useEffect, useMemo, useState } from 'react';
+import DeepZoomViewer, { DeepZoomMeta } from '../components/DeepZoomViewer';
 
-
-
-// fake image
-const FAKE_NASA_IMAGES = [
-  {
-    id: 1,
-    title: 'Pillars of Creation',
-    description: 'A stellar nursery in the Eagle Nebula, famous for star formation.',
-    url: '/assets/nasa-hubble-pic.jpg',
-    aspectRatio: 1.5,
-  },
-];
-
-// imageviewer
-const ImageViewer = ({ imageUrl, altText }: { imageUrl: string, altText: string }) => {
-  //State for Zoom and Pan
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
-
-  //transform style
-  const transformStyle = useMemo(() => ({
-    transform: `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`,
-    transformOrigin: '0 0',
-    cursor: isDragging ? 'grabbing' : zoomLevel > 1 ? 'grab' : 'default',
-  }), [zoomLevel, panX, panY, isDragging]);
-
-  //Enable dragging
-  const handleMouseClick = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setIsDragging(false);
-    } else if (zoomLevel > 1) {
-      setIsDragging(true);
-      setLastPos({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  //Handle drag
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - lastPos.x;
-    const dy = e.clientY - lastPos.y;
-
-    setPanX(prev => prev + dx / zoomLevel);
-    setPanY(prev => prev + dy / zoomLevel);
-    setLastPos({ x: e.clientX, y: e.clientY });
-  };
-
-  // Disable dragging
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const newZoom = Math.min(Math.max(1, zoomLevel + (e.deltaY * -0.005)), 5); //limit zoom
-    setZoomLevel(newZoom);
-    
-    //reset pan
-    if (newZoom === 1) {
-        setPanX(0);
-        setPanY(0);
-    }
-  };
-  
-  //zoom buttons
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(5, prev + 0.5));
-  };
-  
-  const handleZoomOut = () => {
-    const newZoom = Math.max(1, zoomLevel - 0.5);
-    setZoomLevel(newZoom);
-    if (newZoom === 1) {
-        setPanX(0);
-        setPanY(0);
-    }
-  };
-
-  
-  return (
-    <div className="relative w-full h-[600px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
-      
-      {/* zoom*/}
-      <div className="absolute top-4 right-4 z-10 flex space-x-2 bg-black bg-opacity-50 p-2 rounded-lg">
-        <button 
-            onClick={handleZoomIn} 
-            className="text-white text-lg font-bold w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-            +
-        </button>
-        <button 
-            onClick={handleZoomOut} 
-            className="text-white text-lg font-bold w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-            -
-        </button>
-      </div>
-
-     
-      <div
-        className="w-full h-full"
-        onClick={handleMouseClick}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        style={transformStyle}
-      >
-        <Image
-          src={imageUrl}
-          alt={altText}
-          layout="fill"
-          objectFit="contain"
-        />
-      </div>
-      
-      {zoomLevel > 1 && (
-        <div className="absolute bottom-4 left-4 bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-semibold shadow-xl z-10">
-            Zoom: {zoomLevel.toFixed(1)}x (Drag to pan)
-        </div>
-      )}
-    </div>
-  );
+type ApiImage = {
+  id: string;
+  name: string;
+  description: string;
+  width: number;
+  height: number;
+  tileSize: number;
+  maxZoom: number;
+  format: 'png' | 'jpg';
+  scheme: 'xyz' | 'tms';
+  tilesBase: string;
 };
 
-
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
 
 export default function ExplorePage() {
-  const [selectedImageId, setSelectedImageId] = useState(FAKE_NASA_IMAGES[0].id);
+  const [images, setImages] = useState<ApiImage[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-  const selectedImage = useMemo(
-    () => FAKE_NASA_IMAGES.find(img => img.id === selectedImageId) || FAKE_NASA_IMAGES[0],
-    [selectedImageId]
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/api/images`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: { images: ApiImage[] } = await res.json();
+        if (!cancel) {
+          setImages(data.images);
+          setSelectedId(data.images[0]?.id ?? null);
+        }
+      } catch (e: any) {
+        if (!cancel) setErr(e.message ?? 'Failed to load images');
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  const selected = useMemo(
+    () => images.find(i => i.id === selectedId) ?? images[0],
+    [images, selectedId]
   );
-  
+
+  const meta: DeepZoomMeta | null = selected
+    ? {
+        width: selected.width,
+        height: selected.height,
+        maxZoom: selected.maxZoom,
+        tileSize: selected.tileSize,
+        format: selected.format,
+        tilesBase: selected.tilesBase,
+        scheme: selected.scheme,
+      }
+    : null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-8">
+        <h1 className="text-4xl font-extrabold text-blue-400 mb-2">Explore NASA Imagery</h1>
+        <p className="text-gray-400">Loading…</p>
+        <div className="mt-6 h-[600px] bg-gray-800 rounded-xl animate-pulse" />
+      </div>
+    );
+  }
+  if (err || !selected || !meta) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-8">
+        <h1 className="text-3xl font-bold">Explore NASA Imagery</h1>
+        <p className="text-red-400 mt-2">Unable to load images{err ? `: ${err}` : ''}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
-      
-      {/* title*/}
+      {/* title */}
       <div className="max-w-7xl mx-auto mb-8">
-          <h1 className="text-4xl font-extrabold text-blue-400">Explore NASA Imagery</h1>
-          <p className="text-gray-400 mt-2">Discover high-resolution wonders of space and zoom in on the details.</p>
+        <h1 className="text-4xl font-extrabold text-blue-400">Explore NASA Imagery</h1>
+        <p className="text-gray-400 mt-2">Deep-zoom into high-resolution space imagery.</p>
       </div>
-      
+
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
         {/* gallery */}
         <div className="lg:col-span-1 space-y-4">
           <h2 className="text-2xl font-semibold border-b border-gray-700 pb-2 mb-4">Gallery</h2>
-          {FAKE_NASA_IMAGES.map((img) => (
+          {images.map((img) => (
             <div
               key={img.id}
-              className={`
-                p-3 rounded-lg transition-all duration-200 cursor-pointer 
-                shadow-lg border-2 
-                ${img.id === selectedImageId 
-                    ? 'border-blue-500 bg-blue-900/50' 
-                    : 'border-transparent hover:border-gray-500 hover:bg-gray-800'
-                }
-              `}
-              onClick={() => setSelectedImageId(img.id)}
+              className={`p-3 rounded-lg transition-all duration-200 cursor-pointer shadow-lg border-2 ${
+                img.id === selectedId
+                  ? 'border-blue-500 bg-blue-900/50'
+                  : 'border-transparent hover:border-gray-500 hover:bg-gray-800'
+              }`}
+              onClick={() => setSelectedId(img.id)}
             >
-              <h3 className="text-lg font-medium">{img.title}</h3>
+              <h3 className="text-lg font-medium">{img.name}</h3>
               <p className="text-sm text-gray-400">{img.description}</p>
             </div>
           ))}
         </div>
 
-        {/* main Image Viewer */}
+        {/* deep zoom viewer */}
         <div className="lg:col-span-3">
           <div className="mb-6">
-            <h2 className="text-3xl font-bold mb-1 text-yellow-300">{selectedImage.title}</h2>
-            <p className="text-gray-300">{selectedImage.description}</p>
+            <h2 className="text-3xl font-bold mb-1 text-yellow-300">{selected.name}</h2>
+            <p className="text-gray-300">{selected.description}</p>
           </div>
-          <ImageViewer 
-            imageUrl={selectedImage.url} 
-            altText={selectedImage.title}
-          />
+
+          <DeepZoomViewer meta={meta} />
+
           <p className="text-xs text-gray-500 mt-2">
-            Use the scroll wheel to zoom, and click/drag to pan when zoomed in.
+            Scroll to zoom; drag to pan. (If you see extra empty space at the smallest zoom, that’s normal for quadtree tile pyramids.)
           </p>
         </div>
-        
       </div>
-      
-      
+
       <div className="max-w-7xl mx-auto mt-12 text-center">
-        <a 
-          href="/" 
-          className="cta-button link-style-on-hover text-blue-400"
-        >
+        <a href="/" className="cta-button link-style-on-hover text-blue-400">
           &larr; Back to Home
         </a>
       </div>

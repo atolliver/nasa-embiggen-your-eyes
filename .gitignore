@@ -41,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/public/tiles
+/src/backend/data/uploads
+/src/backend/prisma/migrations
+/src/backend/prisma/src/backend/prisma
+/src/backend/prisma/src/backend/prisma/dev.db
