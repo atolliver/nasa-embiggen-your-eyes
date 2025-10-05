@@ -1,7 +1,6 @@
 import Image from "next/image";
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import Link from "next/link";
+import ExploreClient from "./components/ExploreClient"
 
 export default function Home() {
   return (
@@ -41,6 +40,10 @@ export default function Home() {
         height={400}
         className="rounded-2xl shadow-2xl"
       />
+
+      <div id="viewer" className="mt-12 w-full max-w-6xl px-4">
+        <ExploreClient />
+      </div>
     </div>
   </main>
 );
